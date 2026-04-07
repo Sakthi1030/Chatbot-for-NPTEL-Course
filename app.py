@@ -7,6 +7,7 @@ from typing import Iterable
 
 import streamlit as st
 from dotenv import load_dotenv
+import gdown
 from google import genai
 from google.genai import types
 from pypdf import PdfReader
@@ -21,6 +22,7 @@ except ImportError:  # pragma: no cover - optional dependency fallback
 
 SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
 DEFAULT_MODEL = "gemini-3-flash-preview"
+DEFAULT_DOCS_DIR = "docs"
 
 
 @dataclass
@@ -86,6 +88,32 @@ def build_chunks(folder: Path) -> list[Chunk]:
         for piece in chunk_text(text):
             chunks.append(Chunk(source=str(path.relative_to(folder)), text=piece))
     return chunks
+
+
+def has_supported_documents(folder: Path) -> bool:
+    return any(
+        path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS for path in folder.rglob("*")
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def prepare_documents(folder_path: str, drive_folder_url: str) -> str:
+    folder = Path(folder_path).expanduser().resolve()
+    folder.mkdir(parents=True, exist_ok=True)
+
+    if has_supported_documents(folder):
+        return f"Using local documents from {folder}"
+
+    if drive_folder_url.strip():
+        gdown.download_folder(url=drive_folder_url, output=str(folder), quiet=True, remaining_ok=True)
+        if has_supported_documents(folder):
+            return f"Downloaded documents from Google Drive into {folder}"
+        raise ValueError(
+            "Google Drive download finished, but no supported documents were found. "
+            "Make sure the folder is shared publicly and contains PDF, TXT, MD, or DOCX files."
+        )
+
+    return f"No documents found yet in {folder}"
 
 
 def format_context(chunks: Iterable[Chunk]) -> str:
@@ -193,16 +221,26 @@ def main() -> None:
 
     api_key, model_name, top_k = render_sidebar()
 
-    default_docs_path = os.getenv("DOCS_DIR", "")
+    default_docs_path = os.getenv("DOCS_DIR", DEFAULT_DOCS_DIR)
+    drive_folder_url = os.getenv("GDRIVE_FOLDER_URL", "")
     docs_path = st.text_input(
         "Document folder path",
         value=default_docs_path,
         placeholder=r"C:\Users\you\Google Drive\NPT file",
         help="Use any folder that contains your course documents.",
     )
+    if drive_folder_url:
+        st.caption("A Google Drive folder URL is configured for automatic document download.")
 
     if not docs_path:
         st.info("Enter a document folder path to build the retriever.")
+        return
+
+    try:
+        prep_message = prepare_documents(docs_path, drive_folder_url)
+        st.caption(prep_message)
+    except Exception as exc:
+        st.error(f"Document preparation failed: {exc}")
         return
 
     try:

@@ -42,6 +42,8 @@ streamlit run app.py --server.port $PORT --server.address 0.0.0.0
 
 Important: Render free web services currently spin down after 15 minutes of inactivity, so use a paid instance if you want it to stay warm all the time.
 
+If `GDRIVE_FOLDER_URL` is set, the app will try to download documents from that public Google Drive folder into `DOCS_DIR` on startup.
+
 ## Document folder
 
 Set `DOCS_DIR` in `.env` or paste the folder path into the app. This can be:
@@ -56,7 +58,7 @@ Set `DOCS_DIR` in `.env` or paste the folder path into the app. This can be:
 If you deploy to Render, the app cannot read files directly from your personal Google Drive on your laptop. For Render hosting, your documents need to be:
 
 - Committed into the repo, such as a `docs/` folder
-- Downloaded from a public or authenticated cloud source at startup
+- Downloaded from a public Google Drive folder through `GDRIVE_FOLDER_URL`
 - Stored in an external database or object store
 
 ## Suggested free model

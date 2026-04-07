@@ -12,5 +12,7 @@ services:
         value: gemini-3-flash-preview
       - key: DOCS_DIR
         value: docs
+      - key: GDRIVE_FOLDER_URL
+        value: https://drive.google.com/drive/folders/1aa9GiBKwqPv8LXCUzXeSrRg2mHxoKFhN?usp=drive_link
       - key: GEMINI_API_KEY
         sync: false
